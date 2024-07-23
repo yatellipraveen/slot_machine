@@ -27,6 +27,7 @@ window.onload = async function () {
         PIXI.Texture.from('assets/lv4_symbol.png')
     ];
 
+    //init reel indexes and resulting reels to empty
     let reel_indexes = [0, 0, 0, 0, 0];
     let resulting_reels = [[], [], []];
 
@@ -52,6 +53,7 @@ window.onload = async function () {
 
     const band_length = bands[0].length;
 
+    //reels container to display 3x5 reels on screen
     let reelsContainer = new PIXI.Container();
     app.stage.addChild(reelsContainer);
 
@@ -61,7 +63,7 @@ window.onload = async function () {
     //add spin button to canvas
     addSpinButton(app, SYMBOL_WIDTH, SYMBOL_HEIGHT, startSpinning);
 
-    //randomly generate indexes for reels
+    //randomly generate indexes for reels and display new reels
     function startSpinning() {
         //generate 5 random indexes
         for (let i = 0; i < 5; i++) {
@@ -69,13 +71,15 @@ window.onload = async function () {
         }
 
         clearContainers();
-        //clear the existing reel canvas
+        //clear the existing reel container
         app.stage.removeChild(reelsContainer);
-        //create new canvas
+
+        //create new reel container for new indexes
         reelsContainer = new PIXI.Container();
         app.stage.addChild(reelsContainer);
 
-
+        //creating reel symbols for new random indexes
+        //TODO: move to a common function to avoid repeated code
         for (let i = 0; i < 3; i++) {
             for (let j = 0; j < 5; j++) {
                 let band_index = (reel_indexes[j] + i) % band_length;
@@ -91,21 +95,20 @@ window.onload = async function () {
             }
         }
 
-        //call calculation method
-
+        //call calculation winnings method
         calculateWinnings();
     }
-    //create new symbols on canvas
 
-    //Do calculations
+    //method to calculate the winnings for the new generated reels
     function calculateWinnings() {
 
-        //     reels
-        //     [0, 1, 2, 3, 4],
-        //     [5, 6, 7, 8, 9]
-        //     [10, 11, 12, 13, 14]
+        /*  Indexes of reels on screen for reference to create payline matrix using these indices
+            [0, 1, 2, 3, 4],
+            [5, 6, 7, 8, 9]
+            [10, 11, 12, 13, 14]
+        */
 
-        //initialize paylines
+        //payline matrix for calculating winnings
         const paylines = [
             [5, 6, 7, 8, 9],
             [0, 1, 2, 3, 4],
@@ -116,6 +119,8 @@ window.onload = async function () {
             [10, 6, 2, 3, 14]
         ]
 
+        //paytable to indentify the point achieved
+        //here index 1 = 3 matches, index 2 = 4 matches, index 3 = 5 matches of symbols
         const paytable = [
             ["hv1", 10, 20, 50],
             ["hv2", 5, 10, 20],
@@ -127,9 +132,7 @@ window.onload = async function () {
             ["lv4", 1, 2, 3]
         ]
 
-        //iterate through paylines and calculate winnings of each row
-
-        console.log(resulting_reels)
+        //iterate through paylines and calculate winnings of payline left to right
 
         let result_string = "Total wins: #totalWins \n";
         const payline_string = "- payline #id, #symbol x#matches, #payout \n";
@@ -177,9 +180,10 @@ window.onload = async function () {
 
     let winningContainer = null;
 
+    //method to create a winning container below the spin button and display the winnings
     function displayWinning(result_string) {
 
-        //create canvas for results
+        //create container to display results
         winningContainer = new PIXI.Container();
         app.stage.addChild(winningContainer);
 
@@ -199,22 +203,20 @@ window.onload = async function () {
             wordWrapWidth: 440,
         });
 
-        const richText = new PIXI.Text({
+        const winningText = new PIXI.Text({
             text: result_string,
             style,
         });
 
-        richText.y = SYMBOL_HEIGHT * 4;
-        richText.x = SYMBOL_WIDTH * 2;
+        winningText.y = SYMBOL_HEIGHT * 4;
+        winningText.x = SYMBOL_WIDTH * 2;
         // richText.anchor = 0.5;
 
-        winningContainer.addChild(richText);
-
-        //show results
+        winningContainer.addChild(winningText);
     }
 
-    //clearContainers
-
+    //method to reset winning container on every sping
+    //TODO: add reel container as well to clear everything at single function call
     function clearContainers() {
         if (winningContainer != null) {
             app.stage.removeChild(winningContainer);
@@ -225,9 +227,11 @@ window.onload = async function () {
 
 }
 
+//method to display loader screen and load the symbols before displaying
 async function LoadAssets(app) {
-    let loaderContainer = new PIXI.Container();
 
+    //creating loader screen with loading percentage
+    let loaderContainer = new PIXI.Container();
     let blackScreen = new PIXI.Graphics();
     blackScreen.beginFill("black");
     blackScreen.drawRect(0, 0, app.screen.width, app.screen.height);
@@ -257,6 +261,7 @@ async function LoadAssets(app) {
 
     loaderContainer.addChild(loaderText);
     app.stage.addChild(loaderContainer);
+
     // Load the textures
     await PIXI.Assets.load([
         'assets/hv1_symbol.png',
@@ -272,6 +277,9 @@ async function LoadAssets(app) {
 
     loaderContainer.visible = false;
 
+    //method that triggers the everytime showprogress in changed
+    //updates the percentage text on the loader screen
+    //TODO: Move text creation code to a common utility function (DRY Principle)
     function showProgress(e) {
         loaderContainer.removeChild(loaderText);
         let loaderPercentage = 'Loading ...' + Math.floor(e * 100) + '%'
@@ -283,6 +291,7 @@ async function LoadAssets(app) {
     }
 }
 
+//method to create and them display reels on the reel container
 function createAndDisplayReels(reel_indexes, bands, band_length, slotTextures, SYMBOL_WIDTH, SYMBOL_HEIGHT, reelsContainer) {
     for (let i = 0; i < 3; i++) {
         for (let j = 0; j < 5; j++) {
@@ -299,6 +308,7 @@ function createAndDisplayReels(reel_indexes, bands, band_length, slotTextures, S
     }
 }
 
+//method to add spin button below the reels
 function addSpinButton(app, SYMBOL_WIDTH, SYMBOL_HEIGHT, startSpinning) {
     const spinContainer = new PIXI.Container();
     app.stage.addChild(spinContainer);
@@ -312,47 +322,11 @@ function addSpinButton(app, SYMBOL_WIDTH, SYMBOL_HEIGHT, startSpinning) {
     spinSymbol.height = SYMBOL_HEIGHT;
     spinContainer.addChild(spinSymbol);
 
-    //add Reel symbol to canvas 
-
     //create click event on spin
-    // Set the interactivity.
+    //Set start spinning method when spin is clicked.
     spinContainer.eventMode = 'static';
     spinContainer.cursor = 'pointer';
     spinContainer.addListener('pointerdown', () => {
         startSpinning();
     });
 }
-
-// function startSpinning(reel_indexes, ) {
-//     //generate 5 random indexes
-//     for (let i = 0; i < 5; i++) {
-//         reel_indexes[i] = Math.floor(Math.random() * band_length);
-//     }
-
-//     clearContainers();
-//     //clear the existing reel canvas
-//     app.stage.removeChild(reelsContainer);
-//     //create new canvas
-//     reelsContainer = new PIXI.Container();
-//     app.stage.addChild(reelsContainer);
-
-
-//     for (let i = 0; i < 3; i++) {
-//         for (let j = 0; j < 5; j++) {
-//             let band_index = (reel_indexes[j] + i) % band_length;
-//             let symbol_index = bands[j][band_index]
-//             resulting_reels[i][j] = symbol_index;
-//             const tempSymbol = new PIXI.Sprite(slotTextures[symbol_index]);
-
-//             tempSymbol.x = j * SYMBOL_WIDTH;
-//             tempSymbol.y = i * SYMBOL_HEIGHT;
-//             tempSymbol.width = SYMBOL_WIDTH;
-//             tempSymbol.height = SYMBOL_HEIGHT;
-//             reelsContainer.addChild(tempSymbol);
-//         }
-//     }
-
-//     //call calculation method
-
-//     calculateWinnings();
-// }
